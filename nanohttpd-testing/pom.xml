@@ -5,7 +5,7 @@
     <parent>
         <artifactId>nanohttpd-champion</artifactId>
         <groupId>com.github.mike10004</groupId>
-        <version>0.1-SNAPSHOT</version>
+        <version>0.1</version>
     </parent>
     <name>nanohttpd-testing</name>
     <description>Library that helps you use NanoHTTPD in your unit tests</description>
