@@ -61,7 +61,9 @@ public class NanoServer {
     }
 
     public static class Builder {
+
         private List<RequestHandler> requestHandlers = new ArrayList<>();
+        private RequestHandler defaultRequestHandler = RequestHandler.getDefault();
 
         private Builder() {}
 
@@ -117,8 +119,13 @@ public class NanoServer {
             return this;
         }
 
+        public Builder setDefault(RequestHandler defaultRequestHandler) {
+            this.defaultRequestHandler = checkNotNull(defaultRequestHandler);
+            return this;
+        }
+
         public NanoServer build() {
-            return new NanoServer(requestHandlers, RequestHandler.getDefault());
+            return new NanoServer(requestHandlers, defaultRequestHandler);
         }
     }
 

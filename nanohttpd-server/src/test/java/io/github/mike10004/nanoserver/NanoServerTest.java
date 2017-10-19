@@ -15,7 +15,7 @@ public class NanoServerTest {
     public void basic() throws Exception {
 
         NanoServer server = NanoServer.builder()
-                .getPath("/hello", NanoResponse.builder(200).plainTextUtf8("hello").build())
+                .getPath("/hello", NanoResponse.status(200).plainTextUtf8("hello"))
                 .build();
         try (NanoControl control = server.startServer();
              CloseableHttpClient client = HttpClients.createSystem()) {

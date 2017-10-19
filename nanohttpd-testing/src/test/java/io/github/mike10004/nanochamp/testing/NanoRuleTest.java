@@ -1,6 +1,5 @@
 package io.github.mike10004.nanochamp.testing;
 
-import io.github.mike10004.nanoserver.NanoControl;
 import io.github.mike10004.nanoserver.NanoResponse;
 import io.github.mike10004.nanoserver.NanoServer;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -16,12 +15,12 @@ import java.net.URI;
 
 import static org.apache.http.HttpStatus.SC_NOT_FOUND;
 import static org.apache.http.HttpStatus.SC_OK;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class NanoRuleTest {
 
     @Rule
-    public NanoRule nanoRule = new NanoRule(NanoServer.builder().getPath("/hello", NanoResponse.builder(200).plainTextUtf8("OK").build()).build());
+    public NanoRule nanoRule = new NanoRule(NanoServer.builder().getPath("/hello", NanoResponse.status(200).plainTextUtf8("OK")).build());
 
     @Test
     public void getHello() throws Exception {

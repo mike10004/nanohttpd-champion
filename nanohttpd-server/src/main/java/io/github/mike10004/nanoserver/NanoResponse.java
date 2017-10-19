@@ -14,6 +14,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Builder for responses. Builds instances of {@link NanoHTTPD.Response}.
+ * Provides a response-construction API that is intuitive and compact for 90%
+ * of use cases and verbose but flexible for the other 10%.
  */
 public class NanoResponse {
 
@@ -21,7 +23,7 @@ public class NanoResponse {
 
     private final NanoHTTPD.Response.IStatus status;
     private MediaType contentType;
-    private Supplier<InputStream> content;
+    private Supplier<? extends InputStream> content;
     private long contentLength;
 
     private NanoResponse(IStatus status) {
@@ -34,7 +36,7 @@ public class NanoResponse {
         return NanoHTTPD.newFixedLengthResponse(status, contentType.toString(), content.get(), contentLength);
     }
 
-    public static NanoResponse builder(int status) {
+    public static NanoResponse status(int status) {
         NanoHTTPD.Response.IStatus status_ = NanoHTTPD.Response.Status.lookup(status);
         if (status_ == null) {
             status_ = new NanoHTTPD.Response.IStatus() {
@@ -50,38 +52,50 @@ public class NanoResponse {
                 }
             };
         }
-        return builder(status_);
+        return status(status_);
     }
 
-    public static NanoResponse builder(NanoHTTPD.Response.IStatus status) {
+    public static NanoResponse status(NanoHTTPD.Response.IStatus status) {
         return new NanoResponse(status);
     }
 
-    public NanoResponse content(MediaType contentType, InputStream data, long contentLength) {
-        type(contentType);
-        this.content = () -> data;
-        this.contentLength = contentLength;
-        return this;
+    public NanoHTTPD.Response content(MediaType contentType, InputStream data, long contentLength) {
+        return content(contentType, () -> data, contentLength);
     }
 
-    public NanoResponse content(MediaType contentType, byte[] data) {
+    private NanoHTTPD.Response content(MediaType contentType, Supplier<? extends InputStream> data, long contentLength) {
+        type(contentType);
+        this.content = data;
+        this.contentLength = contentLength;
+        return build();
+    }
+
+    public  NanoHTTPD.Response content(MediaType contentType, byte[] data) {
         return content(contentType, new ByteArrayInputStream(data), data.length);
     }
 
-    public NanoResponse plainTextUtf8(String text) {
+    public NanoHTTPD.Response content(MediaType contentType, String data, Charset charset) {
+        return content(contentType, data.getBytes(charset));
+    }
+
+    public NanoHTTPD.Response plainTextUtf8(String text) {
         return plainText(text, StandardCharsets.UTF_8);
     }
 
-    public NanoResponse plainText(String text, Charset charset) {
+    public NanoHTTPD.Response plainText(String text, Charset charset) {
         return content(MediaType.PLAIN_TEXT_UTF_8.withCharset(charset), text.getBytes(charset));
-    }
-
-    public NanoResponse raw(byte[] bytes) {
-        return content(MediaType.OCTET_STREAM, bytes);
     }
 
     public NanoResponse type(MediaType contentType) {
         this.contentType = checkNotNull(contentType);
         return this;
+    }
+
+    public NanoHTTPD.Response jsonUtf8(String json) {
+        return json(json, StandardCharsets.UTF_8);
+    }
+
+    public NanoHTTPD.Response json(String json, Charset charset) {
+        return content(MediaType.JSON_UTF_8.withCharset(charset), json, charset);
     }
 }
