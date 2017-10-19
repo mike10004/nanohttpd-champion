@@ -1,4 +1,4 @@
-package io.github.mike10004.nanoserver;
+package io.github.mike10004.nanochamp.server;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;

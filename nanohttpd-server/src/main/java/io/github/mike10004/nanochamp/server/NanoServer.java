@@ -1,4 +1,4 @@
-package io.github.mike10004.nanoserver;
+package io.github.mike10004.nanochamp.server;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;

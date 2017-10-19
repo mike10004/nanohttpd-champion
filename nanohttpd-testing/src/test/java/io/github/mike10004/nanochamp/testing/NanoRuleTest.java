@@ -1,7 +1,7 @@
 package io.github.mike10004.nanochamp.testing;
 
-import io.github.mike10004.nanoserver.NanoResponse;
-import io.github.mike10004.nanoserver.NanoServer;
+import io.github.mike10004.nanochamp.server.NanoResponse;
+import io.github.mike10004.nanochamp.server.NanoServer;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;

@@ -1,9 +1,9 @@
-package io.github.mike10004.nanoserver;
+package io.github.mike10004.nanochamp.server;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import fi.iki.elonen.NanoHTTPD;
-import io.github.mike10004.nanoserver.NanoServer.RequestHandler;
+import io.github.mike10004.nanochamp.server.NanoServer.RequestHandler;
 import org.apache.http.client.utils.URIBuilder;
 
 import java.io.Closeable;

@@ -1,4 +1,4 @@
-package io.github.mike10004.nanoserver;
+package io.github.mike10004.nanochamp.server;
 
 import com.google.common.net.MediaType;
 import fi.iki.elonen.NanoHTTPD;

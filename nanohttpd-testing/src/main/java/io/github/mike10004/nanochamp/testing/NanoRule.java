@@ -2,9 +2,9 @@ package io.github.mike10004.nanochamp.testing;
 
 import com.google.common.collect.Lists;
 import com.google.common.net.HostAndPort;
-import io.github.mike10004.nanoserver.NanoControl;
-import io.github.mike10004.nanoserver.NanoServer;
-import io.github.mike10004.nanoserver.NanoServer.RequestHandler;
+import io.github.mike10004.nanochamp.server.NanoControl;
+import io.github.mike10004.nanochamp.server.NanoServer;
+import io.github.mike10004.nanochamp.server.NanoServer.RequestHandler;
 import org.junit.rules.ExternalResource;
 
 import java.io.IOException;
