@@ -1,5 +1,7 @@
 package io.github.mike10004.nanochamp.server;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.net.MediaType;
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response.IStatus;
@@ -25,15 +27,19 @@ public class NanoResponse {
     private MediaType contentType;
     private Supplier<? extends InputStream> content;
     private long contentLength;
+    private Multimap<String, String> headers;
 
     private NanoResponse(IStatus status) {
         this.status = checkNotNull(status);
         contentType = MediaType.OCTET_STREAM;
         content = () -> new ByteArrayInputStream(EMPTY_BYTE_ARRAY);
+        headers = ArrayListMultimap.create();
     }
 
     public NanoHTTPD.Response build() {
-        return NanoHTTPD.newFixedLengthResponse(status, contentType.toString(), content.get(), contentLength);
+        NanoHTTPD.Response response = NanoHTTPD.newFixedLengthResponse(status, contentType.toString(), content.get(), contentLength);
+        headers.forEach(response::addHeader);
+        return response;
     }
 
     public static NanoResponse status(int status) {
@@ -59,22 +65,22 @@ public class NanoResponse {
         return new NanoResponse(status);
     }
 
-    public NanoHTTPD.Response content(MediaType contentType, InputStream data, long contentLength) {
+    public NanoResponse content(MediaType contentType, InputStream data, long contentLength) {
         return content(contentType, () -> data, contentLength);
     }
 
-    private NanoHTTPD.Response content(MediaType contentType, Supplier<? extends InputStream> data, long contentLength) {
+    private NanoResponse content(MediaType contentType, Supplier<? extends InputStream> data, long contentLength) {
         type(contentType);
         this.content = data;
         this.contentLength = contentLength;
-        return build();
+        return this;
     }
 
-    public  NanoHTTPD.Response content(MediaType contentType, byte[] data) {
+    public NanoResponse content(MediaType contentType, byte[] data) {
         return content(contentType, new ByteArrayInputStream(data), data.length);
     }
 
-    public NanoHTTPD.Response content(MediaType contentType, String data, Charset charset) {
+    public NanoResponse content(MediaType contentType, String data, Charset charset) {
         return content(contentType, data.getBytes(charset));
     }
 
@@ -83,7 +89,7 @@ public class NanoResponse {
     }
 
     public NanoHTTPD.Response plainText(String text, Charset charset) {
-        return content(MediaType.PLAIN_TEXT_UTF_8.withCharset(charset), text.getBytes(charset));
+        return content(MediaType.PLAIN_TEXT_UTF_8.withCharset(charset), text.getBytes(charset)).build();
     }
 
     public NanoResponse type(MediaType contentType) {
@@ -96,6 +102,11 @@ public class NanoResponse {
     }
 
     public NanoHTTPD.Response json(String json, Charset charset) {
-        return content(MediaType.JSON_UTF_8.withCharset(charset), json, charset);
+        return content(MediaType.JSON_UTF_8.withCharset(charset), json, charset).build();
+    }
+
+    public NanoResponse header(String name, String value) {
+        headers.put(name, value);
+        return this;
     }
 }
