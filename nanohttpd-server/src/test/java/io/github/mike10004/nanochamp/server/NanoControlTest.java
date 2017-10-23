@@ -16,9 +16,6 @@ public class NanoControlTest {
         assertEquals(false, evaluate(buildResponse()));
         assertEquals(false, evaluate(buildResponse("")));
         assertEquals(false, evaluate(buildResponse("", "")));
-        assertEquals(false, evaluate(buildResponse("identity")));
-        assertEquals(false, evaluate(buildResponse("identity, identity")));
-        assertEquals(false, evaluate(buildResponse("identity, identity", "identity")));
         assertEquals(true, evaluate(buildResponse("br")));
         assertEquals(true, evaluate(buildResponse("gzip")));
         assertEquals(true, evaluate(buildResponse("gzip", "gzip")));

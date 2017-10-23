@@ -1,6 +1,6 @@
 package io.github.mike10004.nanochamp.server;
 
-import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.common.net.HttpHeaders;
@@ -12,11 +12,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.URISyntaxException;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 public class NanoControl implements Closeable {
@@ -33,40 +31,58 @@ public class NanoControl implements Closeable {
             port = socket.getLocalPort();
         }
         checkState( port > 0 && port < 65536, "port %s", port);
-        server = new NanoHTTPD(port) {
-            @Override
-            public Response serve(IHTTPSession session) {
-                numRequestsHeard.incrementAndGet();
-                for (RequestHandler handler : NanoControl.this.requestHandlers) {
-                    Response response = handler.serve(session);
-                    if (response != null) {
-                        numRequestsMatched.incrementAndGet();
-                        return response;
-                    }
-                }
-                return defaultRequestHandler.serve(session);
-            }
-
-            @Override
-            protected boolean useGzipWhenAccepted(Response r) {
-                return super.useGzipWhenAccepted(r) && !isAnyContentEncodingSpecified(r);
-            }
-        };
+        server = new NanoHttpdImpl(port, defaultRequestHandler);
         server.start();
-
     }
 
-    private static final Splitter contentEncodingValueSplitter = Splitter.on(Pattern.compile(",\\s*")).trimResults().omitEmptyStrings();
-    private static final Predicate<String> notIdentity = token -> !"identity".equals(token);
+    private class NanoHttpdImpl extends NanoHTTPD {
 
+        private final RequestHandler defaultRequestHandler;
+
+        public NanoHttpdImpl(int port, RequestHandler defaultRequestHandler) {
+            super(port);
+            this.defaultRequestHandler = checkNotNull(defaultRequestHandler);
+        }
+        @Override
+        public Response serve(IHTTPSession session) {
+            numRequestsHeard.incrementAndGet();
+            for (RequestHandler handler : NanoControl.this.requestHandlers) {
+                Response response = handler.serve(session);
+                if (response != null) {
+                    numRequestsMatched.incrementAndGet();
+                    return response;
+                }
+            }
+            return defaultRequestHandler.serve(session);
+        }
+
+        /**
+         * Checks whether response should be gzip encoded. Decides based on whether
+         * the client states that it can accept gzip encoding and whether the response
+         * specifies some other encoding. We override the superclass method because
+         * it ignores whether an alternate encoding is specified, which results in
+         * re-encoding already compressed streams. We take any existing specification of a
+         * content encoding, even the "identity" encoding, as a strong signal that we
+         * should avoid transforming response with an additional gzip encoding.
+         * @param r the response
+         * @return true iff the client accepts gzip encoding and the response does not already
+         * specify an encoding
+         */
+        @Override
+        protected boolean useGzipWhenAccepted(Response r) {
+            return super.useGzipWhenAccepted(r) && !isAnyContentEncodingSpecified(r);
+        }
+    }
+
+    /**
+     * Checks whether the response contains a Content-Encoding header.
+     * @param response the response
+     * @return true iff the response contains a nonempty Content-Encoding header
+     * @see HttpHeaders#CONTENT_ENCODING
+     */
     static boolean isAnyContentEncodingSpecified(NanoHTTPD.Response response) {
         String contentEncoding = response.getHeader(HttpHeaders.CONTENT_ENCODING);
-        //noinspection SimplifiableIfStatement
-        if (contentEncoding != null) {
-            List<String> tokens = contentEncodingValueSplitter.splitToList(contentEncoding);
-            return tokens.stream().anyMatch(notIdentity);
-        }
-        return false;
+        return !Strings.isNullOrEmpty(contentEncoding);
     }
 
     @Override
