@@ -14,6 +14,7 @@ import java.net.ServerSocket;
 import java.net.URISyntaxException;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -24,13 +25,9 @@ public class NanoControl implements Closeable {
     private final AtomicLong numRequestsMatched = new AtomicLong(0L);
     private final AtomicLong numRequestsHeard = new AtomicLong(0L);
 
-    NanoControl(Iterable<? extends RequestHandler> requestHandlers, RequestHandler defaultRequestHandler) throws IOException {
+    NanoControl(int port, Iterable<? extends RequestHandler> requestHandlers, RequestHandler defaultRequestHandler) throws IOException {
+        checkArgument( port > 0 && port < 65536, "port %s", port);
         this.requestHandlers = ImmutableList.copyOf(requestHandlers);
-        int port;
-        try (ServerSocket socket = new ServerSocket(0)) {
-            port = socket.getLocalPort();
-        }
-        checkState( port > 0 && port < 65536, "port %s", port);
         server = new NanoHttpdImpl(port, defaultRequestHandler);
         server.start();
     }
@@ -63,7 +60,8 @@ public class NanoControl implements Closeable {
          * it ignores whether an alternate encoding is specified, which results in
          * re-encoding already compressed streams. We take any existing specification of a
          * content encoding, even the "identity" encoding, as a strong signal that we
-         * should avoid transforming response with an additional gzip encoding.
+         * should avoid transforming response with an additional gzip encoding. See
+         * <a href="https://github.com/NanoHttpd/nanohttpd/issues/463">nanohttpd issue #463</a>.
          * @param r the response
          * @return true iff the client accepts gzip encoding and the response does not already
          * specify an encoding

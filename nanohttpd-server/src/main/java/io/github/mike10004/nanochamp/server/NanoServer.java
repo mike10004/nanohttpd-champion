@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.net.URI;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
@@ -21,7 +22,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 public class NanoServer {
 
@@ -56,8 +56,15 @@ public class NanoServer {
 
     private static final NanoHTTPD.Response NOT_FOUND_RESPONSE = NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "text/plain", "404 Not Found");
 
+    static int findUnusedPort() throws IOException {
+        try (ServerSocket socket = new ServerSocket(0)) {
+            return socket.getLocalPort();
+        }
+    }
+
     public NanoControl startServer() throws IOException {
-        return new NanoControl(requestHandlers, defaultRequestHandler);
+        int port = findUnusedPort();
+        return new NanoControl(port, requestHandlers, defaultRequestHandler);
     }
 
     public static class Builder {

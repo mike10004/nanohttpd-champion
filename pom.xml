@@ -93,6 +93,28 @@
         </pluginManagement>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.0.0-M1</version>
+                <executions>
+                    <execution>
+                        <id>enforce-version-consistency</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <reactorModuleConvergence>
+                                    <message>reactor is not valid</message>
+                                    <ignoreModuleDependencies>true</ignoreModuleDependencies>
+                                </reactorModuleConvergence>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <artifactId>maven-source-plugin</artifactId>
                 <executions>
                     <execution>
