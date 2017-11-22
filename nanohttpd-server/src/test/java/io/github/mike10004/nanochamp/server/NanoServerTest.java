@@ -8,6 +8,7 @@ import org.apache.http.HttpMessage;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
@@ -41,11 +42,11 @@ public class NanoServerTest {
                 .build();
         try (NanoControl control = server.startServer();
              CloseableHttpClient client = HttpClients.createSystem()) {
-            try (CloseableHttpResponse response = client.execute(new HttpGet(control.buildUri().setPath("/hello").build()))) {
+            try (CloseableHttpResponse response = client.execute(new HttpGet(new URIBuilder(control.baseUri()).setPath("/hello").build()))) {
                 assertEquals("status", 200, response.getStatusLine().getStatusCode());
                 assertEquals("message", "hello", EntityUtils.toString(response.getEntity()));
             }
-            try (CloseableHttpResponse response = client.execute(new HttpGet(control.buildUri().setPath("/notfound").build()))) {
+            try (CloseableHttpResponse response = client.execute(new HttpGet(new URIBuilder(control.baseUri()).setPath("/notfound").build()))) {
                 assertEquals("status", 404, response.getStatusLine().getStatusCode());
             }
         }
@@ -60,7 +61,7 @@ public class NanoServerTest {
         NanoServer server = NanoServer.builder().get(responseWithHeaders).build();
         Header headers[];
         try (NanoControl ctrl = server.startServer()) {
-            headers = fetch(ctrl.buildUri().build(), HttpMessage::getAllHeaders);
+            headers = fetch(ctrl.baseUri(), HttpMessage::getAllHeaders);
         }
         @Nullable String value = Stream.of(headers)
                 .filter(header -> headerName.equalsIgnoreCase(header.getName()))
@@ -88,7 +89,7 @@ public class NanoServerTest {
                 .build();
         byte[] actual;
         try (NanoControl ctrl = server.startServer()) {
-            actual = fetchIfOk(ctrl.buildUri().build());
+            actual = fetchIfOk(ctrl.baseUri());
         }
         assertArrayEquals("bytes", original, actual);
     }
@@ -106,7 +107,7 @@ public class NanoServerTest {
         byte[] actual;
         AtomicReference<Header[]> encodingHeaders = new AtomicReference<>();
         try (NanoControl ctrl = server.startServer()) {
-            actual = fetch(ctrl.buildUri().build(), response -> {
+            actual = fetch(ctrl.baseUri(), response -> {
                 encodingHeaders.set(response.getHeaders(HttpHeaders.CONTENT_ENCODING));
                 return EntityUtils.toByteArray(response.getEntity());
             });

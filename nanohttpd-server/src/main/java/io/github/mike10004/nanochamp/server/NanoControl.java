@@ -6,12 +6,11 @@ import com.google.common.net.HostAndPort;
 import com.google.common.net.HttpHeaders;
 import fi.iki.elonen.NanoHTTPD;
 import io.github.mike10004.nanochamp.server.NanoServer.RequestHandler;
-import org.apache.http.client.utils.URIBuilder;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.URISyntaxException;
+import java.net.URI;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -99,18 +98,31 @@ public class NanoControl implements Closeable {
         return HostAndPort.fromParts("localhost", getListeningPort());
     }
 
-    public URIBuilder buildUri() {
-        try {
-            return new URIBuilder("http://" + getSocketAddress() + "/");
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException(e);
-        }
+    /**
+     * Constructs the base URI associated with this server, using scheme {@code http}
+     * @return the base URI
+     * @see #baseUri(String)
+     */
+    public URI baseUri() {
+        return baseUri("http");
     }
 
+    /**
+     * Constructs the base URI associated with server. This is the URI with path {@code /}.
+     * @param scheme the scheme: http or https
+     * @return the base URI
+     */
+    public URI baseUri(String scheme) {
+        checkArgument("http".equals(scheme) || "https".equals(scheme), "only 'http' or 'https' is accepted for scheme parameter, not %s", StringUtils.abbreviate(scheme, 16));
+        return URI.create(scheme + "://" + getSocketAddress() + "/");
+    }
+
+    @SuppressWarnings("unused")
     public long getNumRequestsHeard() {
         return numRequestsHeard.get();
     }
 
+    @SuppressWarnings("unused")
     public long getNumRequestsMatched() {
         return numRequestsMatched.get();
     }

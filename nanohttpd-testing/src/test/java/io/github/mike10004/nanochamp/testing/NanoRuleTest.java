@@ -4,6 +4,7 @@ import io.github.mike10004.nanochamp.server.NanoResponse;
 import io.github.mike10004.nanochamp.server.NanoServer;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
@@ -24,14 +25,14 @@ public class NanoRuleTest {
 
     @Test
     public void getHello() throws Exception {
-        SimpleResponse response = fetch(nanoRule.getControl().buildUri().setPath("/hello").build());
+        SimpleResponse response = fetch(new URIBuilder(nanoRule.getControl().baseUri()).setPath("/hello").build());
         assertEquals("status", SC_OK, response.status);
         assertEquals("body", "OK", response.body);
     }
 
     @Test
     public void getNotFound() throws Exception {
-        SimpleResponse response = fetch(nanoRule.getControl().buildUri().setPath("/goodbye").build());
+        SimpleResponse response = fetch(new URIBuilder(nanoRule.getControl().baseUri()).setPath("/goodbye").build());
         assertEquals("status", SC_NOT_FOUND, response.status);
     }
 
