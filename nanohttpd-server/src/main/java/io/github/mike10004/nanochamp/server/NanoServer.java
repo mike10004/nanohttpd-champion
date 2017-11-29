@@ -6,6 +6,7 @@ import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.IHTTPSession;
 import fi.iki.elonen.NanoHTTPD.Method;
 import fi.iki.elonen.NanoHTTPD.Response;
+import io.github.mike10004.nanochamp.server.NanoControl.HttpdImplFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.LoggerFactory;
 
@@ -27,10 +28,18 @@ public class NanoServer {
 
     private final ImmutableList<RequestHandler> requestHandlers;
     private final RequestHandler defaultRequestHandler;
+    @Nullable
+    private NanoControl.HttpdImplFactory httpdFactory;
+
+    private NanoServer(Builder b) {
+        this(b.requestHandlers, b.defaultRequestHandler);
+        httpdFactory = b.httpdImplFactory;
+    }
 
     public NanoServer(Iterable<RequestHandler> requestHandlers, RequestHandler defaultRequestHandler) {
         this.requestHandlers = ImmutableList.copyOf(requestHandlers);
         this.defaultRequestHandler = checkNotNull(defaultRequestHandler);
+        this.httpdFactory = null;
     }
 
     /**
@@ -64,15 +73,21 @@ public class NanoServer {
 
     public NanoControl startServer() throws IOException {
         int port = findUnusedPort();
-        return new NanoControl(port, requestHandlers, defaultRequestHandler);
+        return new NanoControl(port, requestHandlers, defaultRequestHandler, httpdFactory);
     }
 
     public static class Builder {
 
         private List<RequestHandler> requestHandlers = new ArrayList<>();
         private RequestHandler defaultRequestHandler = RequestHandler.getDefault();
+        private NanoControl.HttpdImplFactory httpdImplFactory = null;
 
         private Builder() {}
+
+        public Builder httpdFactory(NanoControl.HttpdImplFactory httpdFactory) {
+            this.httpdImplFactory = httpdFactory;
+            return this;
+        }
 
         public Builder get(ResponseProvider responseProvider) {
             return handle(request -> request.method == Method.GET, responseProvider);
@@ -132,7 +147,7 @@ public class NanoServer {
         }
 
         public NanoServer build() {
-            return new NanoServer(requestHandlers, defaultRequestHandler);
+            return new NanoServer(this);
         }
     }
 

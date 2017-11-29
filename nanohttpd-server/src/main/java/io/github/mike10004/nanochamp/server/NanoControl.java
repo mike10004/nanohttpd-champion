@@ -25,13 +25,33 @@ public class NanoControl implements Closeable {
     private final AtomicLong numRequestsHeard = new AtomicLong(0L);
 
     NanoControl(int port, Iterable<? extends RequestHandler> requestHandlers, RequestHandler defaultRequestHandler) throws IOException {
+        this(port, requestHandlers, defaultRequestHandler, null);
+    }
+
+    NanoControl(int port, Iterable<? extends RequestHandler> requestHandlers, RequestHandler defaultRequestHandler, HttpdImplFactory httpdFactory) throws IOException {
         checkArgument( port > 0 && port < 65536, "port %s", port);
         this.requestHandlers = ImmutableList.copyOf(requestHandlers);
-        server = new NanoHttpdImpl(port, defaultRequestHandler);
+        if (httpdFactory == null) {
+            httpdFactory = createDefaultFactory();
+        }
+        server = httpdFactory.construct(this, port, defaultRequestHandler);
         server.start();
     }
 
-    private class NanoHttpdImpl extends NanoHTTPD {
+    private static HttpdImplFactory createDefaultFactory() {
+        return new HttpdImplFactory() {
+            @Override
+            public NanoHttpdImpl construct(NanoControl control, int port, RequestHandler defaultRequestHandler) {
+                return control.new NanoHttpdImpl(port, defaultRequestHandler);
+            }
+        };
+    }
+
+    public interface HttpdImplFactory {
+        NanoHttpdImpl construct(NanoControl control, int port, RequestHandler defaultRequestHandler);
+    }
+
+    public class NanoHttpdImpl extends NanoHTTPD {
 
         private final RequestHandler defaultRequestHandler;
 
@@ -69,6 +89,8 @@ public class NanoControl implements Closeable {
         protected boolean useGzipWhenAccepted(Response r) {
             return super.useGzipWhenAccepted(r) && !isAnyContentEncodingSpecified(r);
         }
+
+
     }
 
     /**
