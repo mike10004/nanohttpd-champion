@@ -1,5 +1,6 @@
 package io.github.mike10004.nanochamp.server;
 
+import com.google.common.base.Preconditions;
 import com.google.common.net.HttpHeaders;
 import com.google.common.net.MediaType;
 import fi.iki.elonen.NanoHTTPD;
@@ -29,6 +30,7 @@ import java.util.zip.GZIPOutputStream;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class NanoServerTest {
 
@@ -131,5 +133,19 @@ public class NanoServerTest {
         }
     }
 
-
+    @Test
+    public void defaultResponseSpecifiesCharset() throws Exception {
+        System.out.format("for reference: %s%n", MediaType.PLAIN_TEXT_UTF_8.withCharset(StandardCharsets.US_ASCII));
+        NanoServer server = NanoServer.builder().build();
+        String contentType;
+        try (NanoControl ctrl = server.startServer()) {
+            contentType = fetch(ctrl.baseUri(), response -> {
+                return Stream.of(response.getHeaders(HttpHeaders.CONTENT_TYPE)).findAny().map(Header::getValue).orElse(null);
+            });
+        }
+        assertNotNull("contentType", contentType);
+        MediaType mediaType = MediaType.parse(contentType);
+        Preconditions.checkState(mediaType.is(MediaType.ANY_TEXT_TYPE), "this unit test expects the default response content type to be a text type because otherwise asking whether the charset is present might not make any sense at all");
+        assertTrue("expect charset present in " + mediaType, mediaType.charset().isPresent());
+    }
 }

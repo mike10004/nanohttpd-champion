@@ -6,7 +6,6 @@ import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.IHTTPSession;
 import fi.iki.elonen.NanoHTTPD.Method;
 import fi.iki.elonen.NanoHTTPD.Response;
-import io.github.mike10004.nanochamp.server.NanoControl.HttpdImplFactory;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +62,7 @@ public class NanoServer {
         }
     }
 
-    private static final NanoHTTPD.Response NOT_FOUND_RESPONSE = NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "text/plain", "404 Not Found");
+    private static final NanoHTTPD.Response NOT_FOUND_RESPONSE = NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "text/plain; charset=us-ascii", "404 Not Found");
 
     static int findUnusedPort() throws IOException {
         try (ServerSocket socket = new ServerSocket(0)) {
