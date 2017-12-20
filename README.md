@@ -9,21 +9,20 @@ Use [NanoHTTPD](https://github.com/NanoHttpd/nanohttpd) like a champion.
 
     <dependency>
         <groupId>com.github.mike10004</groupId>
-        <artifactId>nanohttpd-testing</artifactId>
-        <version>0.6</version>
+        <artifactId>nanohttpd-server</artifactId>
+        <version>0.9</version>
     </dependency>
 
 ## Usage
 
     import java.io.InputStream;
     import java.nio.charset.Charset;
-    
     import io.github.mike10004.nanochamp.server.NanoControl;
     import io.github.mike10004.nanochamp.server.NanoResponse;
     import io.github.mike10004.nanochamp.server.NanoServer;
-    
+
     public class NanoServerExample {
-    
+
         public static void main(String[] args) throws Exception {
             Charset charset = Charset.forName("UTF-8");
             NanoServer server = NanoServer.builder()
@@ -38,4 +37,3 @@ Use [NanoHTTPD](https://github.com/NanoHttpd/nanohttpd) like a champion.
             }
         }
     }
-
