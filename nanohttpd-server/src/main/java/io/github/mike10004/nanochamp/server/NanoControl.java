@@ -72,6 +72,11 @@ public class NanoControl implements Closeable {
             return defaultRequestHandler.serve(session);
         }
 
+        @Override
+        public void setAsyncRunner(AsyncRunner asyncRunner) {
+            super.setAsyncRunner(asyncRunner);
+        }
+
         /**
          * Checks whether response should be gzip encoded. Decides based on whether
          * the client states that it can accept gzip encoding and whether the response
