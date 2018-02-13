@@ -1,4 +1,5 @@
-[![Travis build status](https://img.shields.io/travis/mike10004/nanohttpd-champion.svg)](https://travis-ci.org/mike10004/nanohttpd-champion)
+[![Travis build status](https://travis-ci.org/mike10004/nanohttpd-champion.svg?branch=master)](https://travis-ci.org/mike10004/nanohttpd-champion)
+[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/gh1tuv64urbhfldb?svg=true)](https://ci.appveyor.com/project/mike10004/nanohttpd-champion)
 [![Maven Central](https://img.shields.io/maven-central/v/com.github.mike10004/nanohttpd-champion.svg)](https://repo1.maven.org/maven2/com/github/mike10004/nanohttpd-champion/)
 
 # nanohttpd-champion
