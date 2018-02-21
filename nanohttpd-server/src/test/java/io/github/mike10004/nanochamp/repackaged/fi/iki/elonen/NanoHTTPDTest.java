@@ -28,6 +28,9 @@ import static org.junit.Assert.assertEquals;
  */
 public class NanoHTTPDTest {
 
+    /*
+     * This test confirms that normal usage of the server still works.
+     */
     @Test
     public void serveNormally() throws Exception {
         int port = findUnusedPort();
@@ -51,6 +54,10 @@ public class NanoHTTPDTest {
         assertEquals("content", dataStr, responseContent);
     }
 
+    /*
+     * This test would (most likely) fail if the server flush doesn't
+     * wait for all responses to finish being sent.
+     */
     @Test
     public void serve() throws Exception {
         int port = findUnusedPort();
@@ -101,8 +108,9 @@ public class NanoHTTPDTest {
         assertEquals("exceptions", ImmutableList.of(), exceptions);
     }
 
-    private void flush(NanoHTTPD server) {
-        System.out.println("calling nano flush");
+    private void flush(NanoHTTPD server) throws InterruptedException {
+        // System.out.println("calling nano flush");
+        server.flush();
     }
 
     private static int findUnusedPort() throws IOException {

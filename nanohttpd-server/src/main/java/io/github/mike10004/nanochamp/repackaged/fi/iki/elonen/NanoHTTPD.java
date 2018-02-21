@@ -94,6 +94,7 @@ import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
+import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.FlushManager.FlushTicket;
 import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD.Response.IStatus;
 import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD.Response.Status;
 
@@ -955,7 +956,7 @@ public abstract class NanoHTTPD {
                     r.setRequestMethod(this.method);
                     r.setGzipEncoding(useGzipWhenAccepted(r) && acceptEncoding != null && acceptEncoding.contains("gzip"));
                     r.setKeepAlive(keepAlive);
-                    r.send(this.outputStream);
+                    r.send(this.outputStream, flushManager);
                 }
                 if (!keepAlive || r.isCloseConnection()) {
                     throw new SocketException("NanoHttpd Shutdown");
@@ -970,15 +971,15 @@ public abstract class NanoHTTPD {
                 throw ste;
             } catch (SSLException ssle) {
                 Response resp = newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "SSL PROTOCOL FAILURE: " + ssle.getMessage());
-                resp.send(this.outputStream);
+                resp.send(this.outputStream, flushManager);
                 safeClose(this.outputStream);
             } catch (IOException ioe) {
                 Response resp = newFixedLengthResponse(Response.Status.INTERNAL_ERROR, NanoHTTPD.MIME_PLAINTEXT, "SERVER INTERNAL ERROR: IOException: " + ioe.getMessage());
-                resp.send(this.outputStream);
+                resp.send(this.outputStream, flushManager);
                 safeClose(this.outputStream);
             } catch (ResponseException re) {
                 Response resp = newFixedLengthResponse(re.getStatus(), NanoHTTPD.MIME_PLAINTEXT, re.getMessage());
-                resp.send(this.outputStream);
+                resp.send(this.outputStream, flushManager);
                 safeClose(this.outputStream);
             } finally {
                 safeClose(r);
@@ -1585,48 +1586,50 @@ public abstract class NanoHTTPD {
         /**
          * Sends given response to the socket.
          */
-        protected void send(OutputStream outputStream) {
-            SimpleDateFormat gmtFrmt = new SimpleDateFormat("E, d MMM yyyy HH:mm:ss 'GMT'", Locale.US);
-            gmtFrmt.setTimeZone(TimeZone.getTimeZone("GMT"));
+        protected void send(OutputStream outputStream, FlushManager flushManager) {
+            try (FlushTicket ignore = flushManager.open()){
+                SimpleDateFormat gmtFrmt = new SimpleDateFormat("E, d MMM yyyy HH:mm:ss 'GMT'", Locale.US);
+                gmtFrmt.setTimeZone(TimeZone.getTimeZone("GMT"));
 
-            try {
-                if (this.status == null) {
-                    throw new Error("sendResponse(): Status can't be null.");
+                try {
+                    if (this.status == null) {
+                        throw new Error("sendResponse(): Status can't be null.");
+                    }
+                    PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(outputStream, new ContentType(this.mimeType).getEncoding())), false);
+                    pw.append("HTTP/1.1 ").append(this.status.getDescription()).append(" \r\n");
+                    if (this.mimeType != null) {
+                        printHeader(pw, "Content-Type", this.mimeType);
+                    }
+                    if (getHeader("date") == null) {
+                        printHeader(pw, "Date", gmtFrmt.format(new Date()));
+                    }
+                    for (Entry<String, String> entry : this.header.entrySet()) {
+                        printHeader(pw, entry.getKey(), entry.getValue());
+                    }
+                    if (getHeader("connection") == null) {
+                        printHeader(pw, "Connection", (this.keepAlive ? "keep-alive" : "close"));
+                    }
+                    if (getHeader("content-length") != null) {
+                        encodeAsGzip = false;
+                    }
+                    if (encodeAsGzip) {
+                        printHeader(pw, "Content-Encoding", "gzip");
+                        setChunkedTransfer(true);
+                    }
+                    long pending = this.data != null ? this.contentLength : 0;
+                    if (this.requestMethod != Method.HEAD && this.chunkedTransfer) {
+                        printHeader(pw, "Transfer-Encoding", "chunked");
+                    } else if (!encodeAsGzip) {
+                        pending = sendContentLengthHeaderIfNotAlreadyPresent(pw, pending);
+                    }
+                    pw.append("\r\n");
+                    pw.flush();
+                    sendBodyWithCorrectTransferAndEncoding(outputStream, pending);
+                    outputStream.flush();
+                    safeClose(this.data);
+                } catch (IOException ioe) {
+                    NanoHTTPD.LOG.log(Level.SEVERE, "Could not send response to the client", ioe);
                 }
-                PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(outputStream, new ContentType(this.mimeType).getEncoding())), false);
-                pw.append("HTTP/1.1 ").append(this.status.getDescription()).append(" \r\n");
-                if (this.mimeType != null) {
-                    printHeader(pw, "Content-Type", this.mimeType);
-                }
-                if (getHeader("date") == null) {
-                    printHeader(pw, "Date", gmtFrmt.format(new Date()));
-                }
-                for (Entry<String, String> entry : this.header.entrySet()) {
-                    printHeader(pw, entry.getKey(), entry.getValue());
-                }
-                if (getHeader("connection") == null) {
-                    printHeader(pw, "Connection", (this.keepAlive ? "keep-alive" : "close"));
-                }
-                if (getHeader("content-length") != null) {
-                    encodeAsGzip = false;
-                }
-                if (encodeAsGzip) {
-                    printHeader(pw, "Content-Encoding", "gzip");
-                    setChunkedTransfer(true);
-                }
-                long pending = this.data != null ? this.contentLength : 0;
-                if (this.requestMethod != Method.HEAD && this.chunkedTransfer) {
-                    printHeader(pw, "Transfer-Encoding", "chunked");
-                } else if (!encodeAsGzip) {
-                    pending = sendContentLengthHeaderIfNotAlreadyPresent(pw, pending);
-                }
-                pw.append("\r\n");
-                pw.flush();
-                sendBodyWithCorrectTransferAndEncoding(outputStream, pending);
-                outputStream.flush();
-                safeClose(this.data);
-            } catch (IOException ioe) {
-                NanoHTTPD.LOG.log(Level.SEVERE, "Could not send response to the client", ioe);
             }
         }
 
@@ -2009,6 +2012,11 @@ public abstract class NanoHTTPD {
     private TempFileManagerFactory tempFileManagerFactory;
 
     /**
+     * Flush manager.
+     */
+    private final FlushManager flushManager;
+
+    /**
      * Constructs an HTTP server on given port.
      */
     public NanoHTTPD(int port) {
@@ -2029,8 +2037,13 @@ public abstract class NanoHTTPD {
     public NanoHTTPD(String hostname, int port) {
         this.hostname = hostname;
         this.myPort = port;
+        flushManager = new PhaserFlushManager();
         setTempFileManagerFactory(new DefaultTempFileManagerFactory());
         setAsyncRunner(new DefaultAsyncRunner());
+    }
+
+    public void flush() throws InterruptedException {
+        flushManager.flush();
     }
 
     /**
