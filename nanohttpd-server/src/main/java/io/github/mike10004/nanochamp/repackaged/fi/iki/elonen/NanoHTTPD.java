@@ -148,6 +148,7 @@ import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD.Response
  * See the separate "LICENSE.md" file for the distribution license (Modified BSD
  * licence)
  */
+@SuppressWarnings({"NullableProblems", "Convert2Diamond", "ConstantConditions", "unused", "UnnecessaryInterfaceModifier", "UnusedAssignment", "RedundantStringToString", "StringConcatenationInLoop", "Java8MapApi", "UnnecessarySemicolon", "Deprecated", "DeprecatedIsStillUsed", "ResultOfMethodCallIgnored", "TryWithIdenticalCatches", "deprecation", "FinalPrivateMethod", "FinalStaticMethod", "RedundantThrows", "RedundantCast"})
 public abstract class NanoHTTPD {
 
     /**
