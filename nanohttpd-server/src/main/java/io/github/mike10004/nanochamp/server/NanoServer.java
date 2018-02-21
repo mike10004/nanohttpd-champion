@@ -2,10 +2,10 @@ package io.github.mike10004.nanochamp.server;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
-import fi.iki.elonen.NanoHTTPD;
-import fi.iki.elonen.NanoHTTPD.IHTTPSession;
-import fi.iki.elonen.NanoHTTPD.Method;
-import fi.iki.elonen.NanoHTTPD.Response;
+import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD;
+import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD.IHTTPSession;
+import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD.Method;
+import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.LoggerFactory;
 

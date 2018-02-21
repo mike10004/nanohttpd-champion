@@ -3,8 +3,8 @@ package io.github.mike10004.nanochamp.server;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.net.MediaType;
-import fi.iki.elonen.NanoHTTPD;
-import fi.iki.elonen.NanoHTTPD.Response.IStatus;
+import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD;
+import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD.Response.IStatus;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;

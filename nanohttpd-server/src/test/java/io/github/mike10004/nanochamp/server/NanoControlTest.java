@@ -1,10 +1,8 @@
 package io.github.mike10004.nanochamp.server;
 
 import com.google.common.io.ByteStreams;
-import fi.iki.elonen.NanoHTTPD;
-import fi.iki.elonen.NanoHTTPD.Response;
-import io.github.mike10004.nanochamp.server.NanoControl.HttpdImplFactory;
-import io.github.mike10004.nanochamp.server.NanoControl.NanoHttpdImpl;
+import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD;
+import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD.Response;
 import io.github.mike10004.nanochamp.server.NanoServer.RequestHandler;
 import org.apache.http.HttpHeaders;
 import org.junit.Test;

@@ -3,7 +3,7 @@ package io.github.mike10004.nanochamp.server;
 import com.google.common.base.Preconditions;
 import com.google.common.net.HttpHeaders;
 import com.google.common.net.MediaType;
-import fi.iki.elonen.NanoHTTPD;
+import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD;
 import org.apache.http.Header;
 import org.apache.http.HttpMessage;
 import org.apache.http.client.ResponseHandler;

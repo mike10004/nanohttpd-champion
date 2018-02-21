@@ -19,10 +19,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.nanohttpd</groupId>
-            <artifactId>nanohttpd</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>

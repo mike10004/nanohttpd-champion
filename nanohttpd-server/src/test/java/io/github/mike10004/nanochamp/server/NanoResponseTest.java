@@ -1,7 +1,7 @@
 package io.github.mike10004.nanochamp.server;
 
 import com.google.common.net.MediaType;
-import fi.iki.elonen.NanoHTTPD;
+import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD;
 import org.junit.Test;
 
 import java.nio.charset.Charset;

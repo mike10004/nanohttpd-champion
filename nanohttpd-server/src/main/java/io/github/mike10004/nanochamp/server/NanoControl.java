@@ -4,7 +4,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.common.net.HttpHeaders;
-import fi.iki.elonen.NanoHTTPD;
+import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD;
 import io.github.mike10004.nanochamp.server.NanoServer.RequestHandler;
 import org.apache.commons.lang3.StringUtils;
 
