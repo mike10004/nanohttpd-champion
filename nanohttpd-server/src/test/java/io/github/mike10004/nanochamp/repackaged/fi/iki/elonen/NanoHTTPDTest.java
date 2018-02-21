@@ -6,11 +6,8 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.net.ServerSocket;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -18,13 +15,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
-import static com.google.common.base.Preconditions.checkState;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * This is a test that simulates the race condition where your HTTP client is operating
@@ -61,7 +54,7 @@ public class NanoHTTPDTest {
     @Test
     public void serve() throws Exception {
         int port = findUnusedPort();
-        int dataLength = 8192000;
+        int dataLength = 8192000 * 2;
         byte[] dataBytes = new byte[dataLength];
         Random random = new Random(getClass().getName().hashCode());
         random.nextBytes(dataBytes);
@@ -80,14 +73,17 @@ public class NanoHTTPDTest {
         CountDownLatch clientReadBegunLatch = new CountDownLatch(1);
         Thread clientReadThread = new Thread(() -> {
             System.out.println("opening connection to " + url);
+            long n = -1;
             try (InputStream in = url.openStream()) {
                 clientReadBegunLatch.countDown();
-                ByteStreams.copy(in, bytesRead);
+                n = ByteStreams.copy(in, bytesRead);
             } catch (IOException e) {
                 System.out.println("exception during client read: " + e);
-                e.printStackTrace(System.out);
                 exceptions.add(e);
+            } finally {
+                System.out.format("%d bytes transferred%n", n);
             }
+
         });
         clientReadThread.start();
         clientReadBegunLatch.await();
@@ -97,14 +93,16 @@ public class NanoHTTPDTest {
         if (clientReadThread.isAlive()) {
             clientReadThread.join();
         }
-        int available = dataInput.available();
-        System.out.format("data available: %d (of %d)%n", available, dataLength);
-        checkState(available > 0, "some data should still be available");
+        byte[] bytesReadArray = bytesRead.toByteArray();
+        assertArrayEquals("bytes read equals bytes in response", dataBytes, bytesReadArray);
+//        int available = dataInput.available();
+//        System.out.format("data available: %d (of %d)%n", available, dataLength);
+//        checkState(available > 0, "some data should still be available");
         assertEquals("exceptions", ImmutableList.of(), exceptions);
     }
 
     private void flush(NanoHTTPD server) {
-
+        System.out.println("calling nano flush");
     }
 
     private static int findUnusedPort() throws IOException {
