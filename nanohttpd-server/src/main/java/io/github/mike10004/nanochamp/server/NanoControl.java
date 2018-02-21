@@ -149,4 +149,7 @@ public class NanoControl implements Closeable {
         return numRequestsMatched.get();
     }
 
+    public void flush() throws InterruptedException {
+        server.flush();
+    }
 }
