@@ -70,9 +70,13 @@ public class NanoServer {
         }
     }
 
+    public NanoControl startServer(int port) throws IOException {
+        return new NanoControl(port, requestHandlers, defaultRequestHandler, httpdFactory);
+    }
+
     public NanoControl startServer() throws IOException {
         int port = findUnusedPort();
-        return new NanoControl(port, requestHandlers, defaultRequestHandler, httpdFactory);
+        return startServer(port);
     }
 
     public static class Builder {

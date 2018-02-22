@@ -6,6 +6,7 @@ import com.google.common.net.MediaType;
 import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD;
 import org.apache.http.Header;
 import org.apache.http.HttpMessage;
+import org.apache.http.HttpResponse;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -20,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -39,10 +41,35 @@ public class NanoServerTest {
 
     @Test
     public void basic() throws Exception {
+        printTitle("basic");
+        doBasicTest(NanoServer::startServer);
+    }
+
+    private static void printTitle(String title) {
+        System.out.println(title);
+        System.err.println(title);
+    }
+
+    @Test
+    public void basic_specifyPort() throws Exception {
+        printTitle("basic_specifyPort");
+        int port = Tests.findPortToUse();
+        doBasicTest(server -> {
+            NanoControl ctrl = server.startServer(port);
+            assertEquals("port", port, ctrl.getListeningPort());
+            return ctrl;
+        });
+    }
+
+    private interface ControlFactory {
+        NanoControl createControl(NanoServer server) throws IOException;
+    }
+
+    private void doBasicTest(ControlFactory ctrlFactory ) throws IOException, URISyntaxException {
         NanoServer server = NanoServer.builder()
                 .getPath("/hello", NanoResponse.status(200).plainTextUtf8("hello"))
                 .build();
-        try (NanoControl control = server.startServer();
+        try (NanoControl control = ctrlFactory.createControl(server);
              CloseableHttpClient client = HttpClients.createSystem()) {
             try (CloseableHttpResponse response = client.execute(new HttpGet(new URIBuilder(control.baseUri()).setPath("/hello").build()))) {
                 assertEquals("status", 200, response.getStatusLine().getStatusCode());
@@ -56,6 +83,7 @@ public class NanoServerTest {
 
     @Test
     public void customHeaders() throws Exception {
+        printTitle("customHeaders");
         String headerName = "X-Custom-Header", headerValue = "#yolo";
         NanoHTTPD.Response responseWithHeaders = NanoResponse.status(200)
                 .header(headerName, headerValue)
@@ -63,7 +91,7 @@ public class NanoServerTest {
         NanoServer server = NanoServer.builder().get(responseWithHeaders).build();
         Header headers[];
         try (NanoControl ctrl = server.startServer()) {
-            headers = fetch(ctrl.baseUri(), HttpMessage::getAllHeaders);
+            headers = fetch(ctrl, ctrl.baseUri(), HttpMessage::getAllHeaders);
         }
         @Nullable String value = Stream.of(headers)
                 .filter(header -> headerName.equalsIgnoreCase(header.getName()))
@@ -75,6 +103,7 @@ public class NanoServerTest {
 
     @Test
     public void gzipEncodedText() throws Exception {
+        printTitle("gzipEncodedText");
         Charset charset = StandardCharsets.UTF_8;
         byte[] original = "hello".getBytes(charset);
         ByteArrayOutputStream baos = new ByteArrayOutputStream(64);
@@ -91,13 +120,14 @@ public class NanoServerTest {
                 .build();
         byte[] actual;
         try (NanoControl ctrl = server.startServer()) {
-            actual = fetchIfOk(ctrl.baseUri());
+            actual = fetchIfOk(ctrl, ctrl.baseUri());
         }
         assertArrayEquals("bytes", original, actual);
     }
 
     @Test
     public void brotliEncodedText() throws Exception {
+        printTitle("brotliEncodedText");
         byte[] bytes = Base64.getDecoder().decode("G2MAACSCArFAOg=="); // brotli that decompresses to string of 100 'A' characters
         NanoHTTPD.Response rawResponse = NanoResponse.status(200)
                 .content(MediaType.PLAIN_TEXT_UTF_8, bytes)
@@ -109,7 +139,7 @@ public class NanoServerTest {
         byte[] actual;
         AtomicReference<Header[]> encodingHeaders = new AtomicReference<>();
         try (NanoControl ctrl = server.startServer()) {
-            actual = fetch(ctrl.baseUri(), response -> {
+            actual = fetch(ctrl, ctrl.baseUri(), response -> {
                 encodingHeaders.set(response.getHeaders(HttpHeaders.CONTENT_ENCODING));
                 return EntityUtils.toByteArray(response.getEntity());
             });
@@ -118,8 +148,8 @@ public class NanoServerTest {
         assertArrayEquals("bytes", bytes, actual);
     }
 
-    private static byte[] fetchIfOk(URI uri) throws IOException {
-        return fetch(uri, response -> {
+    private static byte[] fetchIfOk(NanoControl ctrl, URI uri) throws IOException {
+        return fetch(ctrl, uri, response -> {
             if (response.getStatusLine().getStatusCode() != 200) {
                 throw new IOException(response.getStatusLine().toString());
             }
@@ -127,19 +157,38 @@ public class NanoServerTest {
         });
     }
 
-    private static <T> T fetch(URI uri, ResponseHandler<T> responseHandler) throws IOException {
+    /*
+     * The server logs an error if the entity is not consumed. Some response handlers
+     * only go for the headers. This method consumes the entity after delegating to the
+     * handler that produces the desired return value.
+     * This doesn't eliminate the error all of the time, but I don't know what else to do.
+     */
+    private static <T> T fetch(NanoControl ctrl, URI uri, ResponseHandler<T> responseHandler) throws IOException {
         try (CloseableHttpClient client = HttpClients.createSystem()) {
-            return client.execute(new HttpGet(uri), responseHandler);
+            T thing;
+            try (CloseableHttpResponse response = client.execute(new HttpGet(uri))) {
+                thing = responseHandler.handleResponse(response);
+                ctrl.flush();
+                EntityUtils.consumeQuietly(response.getEntity());
+            } finally {
+                System.err.println("http response closed");
+            }
+            return thing;
+        } catch (InterruptedException e) {
+            throw new IOException(e);
+        } finally {
+            System.err.println("http client closed");
         }
     }
 
     @Test
     public void defaultResponseSpecifiesCharset() throws Exception {
+        printTitle("defaultResponseSpecifiesCharset");
         System.out.format("for reference: %s%n", MediaType.PLAIN_TEXT_UTF_8.withCharset(StandardCharsets.US_ASCII));
         NanoServer server = NanoServer.builder().build();
         String contentType;
         try (NanoControl ctrl = server.startServer()) {
-            contentType = fetch(ctrl.baseUri(), response -> {
+            contentType = fetch(ctrl, ctrl.baseUri(), response -> {
                 return Stream.of(response.getHeaders(HttpHeaders.CONTENT_TYPE)).findAny().map(Header::getValue).orElse(null);
             });
         }
@@ -148,4 +197,5 @@ public class NanoServerTest {
         Preconditions.checkState(mediaType.is(MediaType.ANY_TEXT_TYPE), "this unit test expects the default response content type to be a text type because otherwise asking whether the charset is present might not make any sense at all");
         assertTrue("expect charset present in " + mediaType, mediaType.charset().isPresent());
     }
+
 }
