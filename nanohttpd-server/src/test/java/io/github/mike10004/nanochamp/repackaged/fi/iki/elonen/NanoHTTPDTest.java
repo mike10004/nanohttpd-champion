@@ -2,6 +2,7 @@ package io.github.mike10004.nanochamp.repackaged.fi.iki.elonen;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
+import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD.Response.IStatus;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -14,7 +15,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -36,22 +45,35 @@ public class NanoHTTPDTest {
         int port = findUnusedPort();
         String dataStr = "hello";
         byte[] dataBytes = dataStr.getBytes(StandardCharsets.US_ASCII);
-        int dataLength = dataBytes.length;
-        NanoHTTPD.Response response = new NanoHTTPD.Response(NanoHTTPD.Response.Status.OK, "text/plain", new ByteArrayInputStream(dataBytes), dataLength);
-        NanoHTTPD nano = new NanoHTTPD(port) {
-            @Override
-            public Response serve(IHTTPSession session) {
-                return response;
-            }
-        };
+        NanoHTTPD nano = new SingleResponseNanoHTTPD(port, newFixedLengthResponseFactory(NanoHTTPD.Response.Status.OK, "text/plain", dataBytes));
         nano.start();
         URL url = new URL("http://localhost:" + port + "/");
         String responseContent;
-        try (InputStream in = url.openStream()) {
-            responseContent = new String(ByteStreams.toByteArray(in), StandardCharsets.US_ASCII);
-        }
+        responseContent = new String(readFully(url), StandardCharsets.US_ASCII);
         nano.stop();
         assertEquals("content", dataStr, responseContent);
+    }
+
+    private static byte[] readFully(URL url) throws IOException {
+        System.out.format("fetching from %s%n", url);
+        try (InputStream in = url.openStream()) {
+            return ByteStreams.toByteArray(in);
+        }
+    }
+
+    private static class SingleResponseNanoHTTPD extends NanoHTTPD {
+
+        private final Function<NanoHTTPD.IHTTPSession, NanoHTTPD.Response> responseFactory;
+
+        private SingleResponseNanoHTTPD(int port, Function<NanoHTTPD.IHTTPSession, NanoHTTPD.Response> responseFactory) {
+            super(port);
+            this.responseFactory = responseFactory;
+        }
+
+        @Override
+        public final Response serve(NanoHTTPD.IHTTPSession session) {
+            return responseFactory.apply(session);
+        }
     }
 
     /*
@@ -65,14 +87,7 @@ public class NanoHTTPDTest {
         byte[] dataBytes = new byte[dataLength];
         Random random = new Random(getClass().getName().hashCode());
         random.nextBytes(dataBytes);
-        ByteArrayInputStream dataInput = new ByteArrayInputStream(dataBytes);
-        NanoHTTPD.Response response = new NanoHTTPD.Response(NanoHTTPD.Response.Status.OK, "text/plain", dataInput, dataLength);
-        NanoHTTPD nano = new NanoHTTPD(port) {
-            @Override
-            public Response serve(IHTTPSession session) {
-                return response;
-            }
-        };
+        NanoHTTPD nano = new SingleResponseNanoHTTPD(port, newFixedLengthResponseFactory(NanoHTTPD.Response.Status.OK, "text/plain", dataBytes));
         nano.start();
         List<IOException> exceptions = new ArrayList<>();
         URL url = new URL("http://localhost:" + port + "/");
@@ -94,7 +109,8 @@ public class NanoHTTPDTest {
         });
         clientReadThread.start();
         clientReadBegunLatch.await();
-        flush(nano);
+        System.out.println("calling nano flush");
+        nano.flush();
         System.out.println("calling nano.stop()");
         nano.stop();
         if (clientReadThread.isAlive()) {
@@ -102,15 +118,62 @@ public class NanoHTTPDTest {
         }
         byte[] bytesReadArray = bytesRead.toByteArray();
         assertArrayEquals("bytes read equals bytes in response", dataBytes, bytesReadArray);
-//        int available = dataInput.available();
-//        System.out.format("data available: %d (of %d)%n", available, dataLength);
-//        checkState(available > 0, "some data should still be available");
         assertEquals("exceptions", ImmutableList.of(), exceptions);
     }
 
-    private void flush(NanoHTTPD server) throws InterruptedException {
-        // System.out.println("calling nano flush");
-        server.flush();
+    @Test
+    public void flushManyTimes() throws Exception {
+        int numTimes = 5;
+        String txt = "hello, world";
+        byte[] bytes = txt.getBytes(StandardCharsets.US_ASCII);
+        int port = findUnusedPort();
+        URL url = new URL("http://localhost:" + port + "/");
+        NanoHTTPD nano = new SingleResponseNanoHTTPD(port, newFixedLengthResponseFactory(NanoHTTPD.Response.Status.OK, "text/plain", bytes));
+        nano.start();
+        try {
+            for (int i = 0; i < numTimes; i++) {
+                System.out.format("[%d] flush attempt%n", i + 1);
+                byte[] received = readFully(url);
+                assertArrayEquals("received", bytes, received);
+                System.out.println("flushing");
+                nano.flush();
+            }
+        } finally {
+            nano.stop();
+        }
+    }
+
+    @Test
+    public void flushConcurrent() throws Exception {
+        int numThreads = 25, numFetchers = 25;
+        ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
+        String txt = "hello, world";
+        byte[] bytes = txt.getBytes(StandardCharsets.US_ASCII);
+        int port = findUnusedPort();
+        URL url = new URL("http://localhost:" + port + "/");
+        NanoHTTPD nano = new SingleResponseNanoHTTPD(port, newFixedLengthResponseFactory(NanoHTTPD.Response.Status.OK, "text/plain", bytes));
+        nano.start();
+        List<Callable<byte[]>> fetchers = IntStream.range(0, numFetchers).boxed().map(i -> {
+            return new Callable<byte[]>() {
+                @Override
+                public byte[] call() throws Exception {
+                    return readFully(url);
+                }
+            };
+        }).collect(Collectors.toList());
+        List<Future<byte[]>> futures;
+        try {
+            futures = executorService.invokeAll(fetchers);
+            nano.flush();
+        } finally {
+            nano.stop();
+        }
+        executorService.shutdown();
+        executorService.awaitTermination(1, TimeUnit.SECONDS);
+        for (Future<byte[]> future: futures) {
+            byte[] actual = future.get();
+            assertArrayEquals("received bytes", bytes, actual);
+        }
     }
 
     private static int findUnusedPort() throws IOException {
@@ -119,4 +182,7 @@ public class NanoHTTPDTest {
         }
     }
 
+    public static Function<NanoHTTPD.IHTTPSession, NanoHTTPD.Response> newFixedLengthResponseFactory(IStatus status, String mimeType, byte[] bytes) {
+        return session -> NanoHTTPD.newFixedLengthResponse(status, mimeType, new ByteArrayInputStream(bytes), bytes.length);
+    }
 }
