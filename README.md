@@ -11,7 +11,7 @@ Use [NanoHTTPD](https://github.com/NanoHttpd/nanohttpd) like a champion.
     <dependency>
         <groupId>com.github.mike10004</groupId>
         <artifactId>nanohttpd-server</artifactId>
-        <version>0.9</version>
+        <version>0.10</version>
     </dependency>
 
 ## Usage
