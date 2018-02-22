@@ -1,10 +1,8 @@
 package io.github.mike10004.nanochamp.repackaged.fi.iki.elonen;
 
-import java.util.concurrent.Phaser;
-
 public interface FlushManager {
 
-    interface FlushTicket extends java.lang.AutoCloseable {
+    interface FlushTicket extends AutoCloseable {
         @Override
         void close();
     }

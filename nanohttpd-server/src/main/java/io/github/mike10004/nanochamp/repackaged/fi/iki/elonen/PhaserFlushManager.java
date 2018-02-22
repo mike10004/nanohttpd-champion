@@ -25,7 +25,7 @@ public class PhaserFlushManager implements FlushManager {
 
         @Override
         public void close() {
-            phaser.arrive();
+            phaser.arriveAndDeregister();
         }
     }
 }
