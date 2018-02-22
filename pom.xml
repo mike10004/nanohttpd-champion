@@ -7,7 +7,7 @@
     <groupId>com.github.mike10004</groupId>
     <artifactId>nanohttpd-champion</artifactId>
     <packaging>pom</packaging>
-    <version>0.10-SNAPSHOT</version>
+    <version>0.10</version>
     <name>nanohttpd-champion</name>
     <description>Library that helps you use NanoHTTPD</description>
     <url>https://github.com/mike10004/nanohttpd-champion</url>
