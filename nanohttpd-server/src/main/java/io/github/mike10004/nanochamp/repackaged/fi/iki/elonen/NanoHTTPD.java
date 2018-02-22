@@ -1587,49 +1587,47 @@ public abstract class NanoHTTPD {
          * Sends given response to the socket.
          */
         protected void send(OutputStream outputStream, FlushManager flushManager) {
-            try (FlushTicket ignore = flushManager.open()){
-                SimpleDateFormat gmtFrmt = new SimpleDateFormat("E, d MMM yyyy HH:mm:ss 'GMT'", Locale.US);
-                gmtFrmt.setTimeZone(TimeZone.getTimeZone("GMT"));
+            SimpleDateFormat gmtFrmt = new SimpleDateFormat("E, d MMM yyyy HH:mm:ss 'GMT'", Locale.US);
+            gmtFrmt.setTimeZone(TimeZone.getTimeZone("GMT"));
 
-                try {
-                    if (this.status == null) {
-                        throw new Error("sendResponse(): Status can't be null.");
-                    }
-                    PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(outputStream, new ContentType(this.mimeType).getEncoding())), false);
-                    pw.append("HTTP/1.1 ").append(this.status.getDescription()).append(" \r\n");
-                    if (this.mimeType != null) {
-                        printHeader(pw, "Content-Type", this.mimeType);
-                    }
-                    if (getHeader("date") == null) {
-                        printHeader(pw, "Date", gmtFrmt.format(new Date()));
-                    }
-                    for (Entry<String, String> entry : this.header.entrySet()) {
-                        printHeader(pw, entry.getKey(), entry.getValue());
-                    }
-                    if (getHeader("connection") == null) {
-                        printHeader(pw, "Connection", (this.keepAlive ? "keep-alive" : "close"));
-                    }
-                    if (getHeader("content-length") != null) {
-                        encodeAsGzip = false;
-                    }
-                    if (encodeAsGzip) {
-                        printHeader(pw, "Content-Encoding", "gzip");
-                        setChunkedTransfer(true);
-                    }
-                    long pending = this.data != null ? this.contentLength : 0;
-                    if (this.requestMethod != Method.HEAD && this.chunkedTransfer) {
-                        printHeader(pw, "Transfer-Encoding", "chunked");
-                    } else if (!encodeAsGzip) {
-                        pending = sendContentLengthHeaderIfNotAlreadyPresent(pw, pending);
-                    }
-                    pw.append("\r\n");
-                    pw.flush();
-                    sendBodyWithCorrectTransferAndEncoding(outputStream, pending);
-                    outputStream.flush();
-                    safeClose(this.data);
-                } catch (IOException ioe) {
-                    NanoHTTPD.LOG.log(Level.SEVERE, "Could not send response to the client", ioe);
+            try (FlushTicket ignore = flushManager.open()) {
+                if (this.status == null) {
+                    throw new Error("sendResponse(): Status can't be null.");
                 }
+                PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(outputStream, new ContentType(this.mimeType).getEncoding())), false);
+                pw.append("HTTP/1.1 ").append(this.status.getDescription()).append(" \r\n");
+                if (this.mimeType != null) {
+                    printHeader(pw, "Content-Type", this.mimeType);
+                }
+                if (getHeader("date") == null) {
+                    printHeader(pw, "Date", gmtFrmt.format(new Date()));
+                }
+                for (Entry<String, String> entry : this.header.entrySet()) {
+                    printHeader(pw, entry.getKey(), entry.getValue());
+                }
+                if (getHeader("connection") == null) {
+                    printHeader(pw, "Connection", (this.keepAlive ? "keep-alive" : "close"));
+                }
+                if (getHeader("content-length") != null) {
+                    encodeAsGzip = false;
+                }
+                if (encodeAsGzip) {
+                    printHeader(pw, "Content-Encoding", "gzip");
+                    setChunkedTransfer(true);
+                }
+                long pending = this.data != null ? this.contentLength : 0;
+                if (this.requestMethod != Method.HEAD && this.chunkedTransfer) {
+                    printHeader(pw, "Transfer-Encoding", "chunked");
+                } else if (!encodeAsGzip) {
+                    pending = sendContentLengthHeaderIfNotAlreadyPresent(pw, pending);
+                }
+                pw.append("\r\n");
+                pw.flush();
+                sendBodyWithCorrectTransferAndEncoding(outputStream, pending);
+                outputStream.flush();
+                safeClose(this.data);
+            } catch (IOException ioe) {
+                NanoHTTPD.LOG.log(Level.SEVERE, "Could not send response to the client", ioe);
             }
         }
 
