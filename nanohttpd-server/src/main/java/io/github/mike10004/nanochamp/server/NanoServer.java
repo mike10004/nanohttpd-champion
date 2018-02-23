@@ -57,12 +57,14 @@ public class NanoServer {
         static RequestHandler getDefault() {
             return (session) -> {
                 LoggerFactory.getLogger(RequestHandler.class.getName() + ".default").debug("404 {} {}", session.getUri(), StringUtils.abbreviate(session.getQueryParameterString(), 128));
-                return NOT_FOUND_RESPONSE;
+                return produceNotFoundResponse();
             };
         }
     }
 
-    private static final NanoHTTPD.Response NOT_FOUND_RESPONSE = NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "text/plain; charset=us-ascii", "404 Not Found");
+    private static NanoHTTPD.Response produceNotFoundResponse() {
+        return NanoHTTPD.newFixedLengthResponse(NanoHTTPD.Response.Status.NOT_FOUND, "text/plain; charset=us-ascii", "404 Not Found");
+    }
 
     static int findUnusedPort() throws IOException {
         try (ServerSocket socket = new ServerSocket(0)) {
