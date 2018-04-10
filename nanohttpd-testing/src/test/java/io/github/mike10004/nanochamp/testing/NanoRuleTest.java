@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 public class NanoRuleTest {
 
     @Rule
-    public NanoRule nanoRule = new NanoRule(NanoServer.builder().getPath("/hello", NanoResponse.status(200).plainTextUtf8("OK")).build());
+    public NanoRule nanoRule = new NanoRule(NanoServer.builder().getPath("/hello", session -> NanoResponse.status(200).plainTextUtf8("OK")).build());
 
     @Test
     public void getHello() throws Exception {

@@ -71,7 +71,7 @@ public class NanoServerTest {
 
     private void doBasicTest(ControlFactory ctrlFactory ) throws IOException, URISyntaxException {
         NanoServer server = NanoServer.builder()
-                .getPath("/hello", NanoResponse.status(200).plainTextUtf8("hello"))
+                .getPath("/hello", session -> NanoResponse.status(200).plainTextUtf8("hello"))
                 .build();
         try (NanoControl control = ctrlFactory.createControl(server);
              CloseableHttpClient client = HttpClients.createSystem()) {
@@ -89,10 +89,11 @@ public class NanoServerTest {
     public void customHeaders() throws Exception {
         printTitle("customHeaders");
         String headerName = "X-Custom-Header", headerValue = "#yolo";
-        NanoHTTPD.Response responseWithHeaders = NanoResponse.status(200)
-                .header(headerName, headerValue)
-                .plainTextUtf8("OK");
-        NanoServer server = NanoServer.builder().get(responseWithHeaders).build();
+        NanoServer server = NanoServer.builder().get(session -> {
+            return NanoResponse.status(200)
+                    .header(headerName, headerValue)
+                    .plainTextUtf8("OK");
+        }).build();
         Header headers[];
         try (NanoControl ctrl = server.startServer()) {
             headers = fetch(ctrl, ctrl.baseUri(), HttpMessage::getAllHeaders);
@@ -115,13 +116,13 @@ public class NanoServerTest {
             out.write(original);
         }
         byte[] gzipped = baos.toByteArray();
-        NanoHTTPD.Response gzippedResponse = NanoResponse.status(200)
-                .content(MediaType.PLAIN_TEXT_UTF_8.withCharset(charset), gzipped)
-                .header(HttpHeaders.CONTENT_ENCODING, ENCODING_GZIP)
-                .build();
         NanoServer server = NanoServer.builder()
-                .get(gzippedResponse)
-                .build();
+                .get(session -> {
+                    return NanoResponse.status(200)
+                            .content(MediaType.PLAIN_TEXT_UTF_8.withCharset(charset), gzipped)
+                            .header(HttpHeaders.CONTENT_ENCODING, ENCODING_GZIP)
+                            .build();
+                }).build();
         byte[] actual;
         try (NanoControl ctrl = server.startServer()) {
             actual = fetchIfOk(ctrl, ctrl.baseUri());
@@ -133,13 +134,13 @@ public class NanoServerTest {
     public void brotliEncodedText() throws Exception {
         printTitle("brotliEncodedText");
         byte[] bytes = Base64.getDecoder().decode("G2MAACSCArFAOg=="); // brotli that decompresses to string of 100 'A' characters
-        NanoHTTPD.Response rawResponse = NanoResponse.status(200)
-                .content(MediaType.PLAIN_TEXT_UTF_8, bytes)
-                .header(HttpHeaders.CONTENT_ENCODING, ENCODING_BROTLI)
-                .build();
         NanoServer server = NanoServer.builder()
-                .get(rawResponse)
-                .build();
+                .get(session -> {
+                    return NanoResponse.status(200)
+                            .content(MediaType.PLAIN_TEXT_UTF_8, bytes)
+                            .header(HttpHeaders.CONTENT_ENCODING, ENCODING_BROTLI)
+                            .build();
+                }).build();
         byte[] actual;
         AtomicReference<Header[]> encodingHeaders = new AtomicReference<>();
         try (NanoControl ctrl = server.startServer()) {
@@ -214,7 +215,7 @@ public class NanoServerTest {
         }
     }
 
-    private static void dumpHeaders(int index, Header[] allHeaders, PrintStream out) {
+    private static void dumpHeaders(int index, Header[] allHeaders, @SuppressWarnings("SameParameterValue") PrintStream out) {
         out.format("[%d] %d headers%n", index, allHeaders.length);
         Stream.of(allHeaders).forEach(header -> {
             out.format("[%d] %s: %s%n", index, header.getName(), header.getValue());
@@ -262,7 +263,6 @@ public class NanoServerTest {
         ResponsePackage pkg;
         int numTries = 12;
         String expectedText = "404 Not Found";
-        Long expectedLen = 13L;
         try (NanoControl ctrl = server.startServer()) {
             for (int i = 0; i < numTries; i++) {
                 pkg = fetch(ctrl, ctrl.baseUri(), ResponsePackage.handler());
@@ -271,7 +271,6 @@ public class NanoServerTest {
                 assertTrue("contentType charset", mediaType.charset().isPresent());
                 String content = new String(pkg.data, mediaType.charset().get());
                 System.out.format("%2d: %d bytes, %d characters in \"%s\"%n", i + 1, pkg.data.length, content.length(), StringEscapeUtils.escapeJava(StringUtils.abbreviate(content, 512)));
-//                assertEquals("content length", expectedLen, pkg.contentLength);
                 assertEquals("content should be same each time", expectedText, content);
             }
         }

@@ -12,7 +12,7 @@ public class NanoServerExample {
     public static void main(String[] args) throws Exception {
         Charset charset = Charset.forName("UTF-8");
         NanoServer server = NanoServer.builder()
-                .get(NanoResponse.status(200).plainText("hello, world", charset))
+                .get(session -> NanoResponse.status(200).plainText("hello, world", charset))
                 .build();
         try (NanoControl control = server.startServer();
             InputStream in = control.baseUri().toURL().openStream()) {

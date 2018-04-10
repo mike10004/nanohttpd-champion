@@ -81,6 +81,13 @@ public class NanoServer {
         return startServer(port);
     }
 
+    /**
+     * Server builder. Use this builder to define how your server should respond to requests.
+     * Note that you should not pre-fabricate {@link NanoHTTPD.Response} objects because each
+     * instance's input stream will be exhausted after it is used the first time. That is,
+     * your {@link ResponseProvider} implementations should always construct a new response
+     * inside the {@link ResponseProvider#serve(ServiceRequest)} method.
+     */
     public static class Builder {
 
         private List<RequestHandler> requestHandlers = new ArrayList<>();
@@ -104,18 +111,6 @@ public class NanoServer {
 
         public Builder getPath(Predicate<? super String> pathPredicate, ResponseProvider responseProvider) {
             return handle(request -> request.method == Method.GET && pathPredicate.test(request.uri.getPath()), responseProvider);
-        }
-
-        public Builder get(NanoHTTPD.Response response) {
-            return handle(request -> request.method == Method.GET, request -> response);
-        }
-
-        public Builder getPath(String path, NanoHTTPD.Response response) {
-            return getPath(path::equals, request -> response);
-        }
-
-        public Builder getPath(Predicate<? super String> pathPredicate, NanoHTTPD.Response response) {
-            return handle(request -> request.method == Method.GET && pathPredicate.test(request.uri.getPath()), request -> response);
         }
 
         public Builder handle(Predicate<? super ServiceRequest> decider, ResponseProvider responseProvider) {
@@ -186,17 +181,31 @@ public class NanoServer {
         return ImmutableMultimap.copyOf(list);
     }
 
+    /**
+     * Interface of classes that provide responses to HTTP requests.
+     */
     public interface ResponseProvider extends RequestHandler {
 
+        /**
+         * Produces a response to a request.
+         * @param request parsed request
+         * @return a response, or null if another handler should handle this request
+         */
         @Nullable
-        Response serve(ServiceRequest request);
+        NanoHTTPD.Response serve(ServiceRequest request);
 
+        /**
+         * Serves a response for a session. This method delegates to
+         * {@link #serve(ServiceRequest)}.
+         * @param session the session
+         * @return a response
+         * @see #serve(ServiceRequest)
+         */
         @Nullable
         @Override
-        default Response serve(IHTTPSession session) {
+        default NanoHTTPD.Response serve(IHTTPSession session) {
             return serve(ServiceRequest.fromSession(session));
         }
-
 
     }
 

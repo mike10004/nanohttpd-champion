@@ -16,6 +16,7 @@ import static org.junit.Assert.*;
 
 public class NanoControlTest {
 
+    @SuppressWarnings("SimplifiableJUnitAssertion")
     @Test
     public void isAnyContentEncodingSpecified() throws Exception {
         assertEquals(false, evaluate(buildResponse()));
@@ -42,8 +43,6 @@ public class NanoControlTest {
         return response;
     }
 
-
-
     @Test
     public void useCustomFactory() throws Exception {
         AtomicInteger stopCalls = new AtomicInteger(0);
@@ -67,7 +66,7 @@ public class NanoControlTest {
         };
         NanoServer server = NanoServer.builder()
                 .httpdFactory(factory)
-                .get(NanoResponse.status(200).plainTextUtf8(expectedcontent))
+                .get(session -> NanoResponse.status(200).plainTextUtf8(expectedcontent))
                 .build();
         String content;
         try (NanoControl control = server.startServer();

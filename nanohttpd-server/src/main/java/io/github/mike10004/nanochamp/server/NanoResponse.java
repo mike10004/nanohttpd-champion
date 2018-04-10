@@ -17,7 +17,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Builder for responses. Builds instances of {@link NanoHTTPD.Response}.
  * Provides a response-construction API that is intuitive and compact for 90%
- * of use cases and verbose but flexible for the other 10%.
+ * of use cases and verbose but flexible for the other 10%. Note that response
+ * instances are single-use (because their input stream is exhausted when served).
  */
 @SuppressWarnings("unused")
 public class NanoResponse {
@@ -166,5 +167,31 @@ public class NanoResponse {
 
     public NanoHTTPD.Response octetStream(byte[] data) {
         return content(MediaType.OCTET_STREAM, data).build();
+    }
+
+    /**
+     * Forwards to the repackaged {@code NanoHTTPD} method.
+     * @return a response
+     * @see NanoHTTPD#newFixedLengthResponse(String)
+     */
+    public static NanoHTTPD.Response newFixedLengthResponse(String msg) {
+        return NanoHTTPD.newFixedLengthResponse(msg);
+    }
+
+    /**
+     * Forwards to the repackaged {@code NanoHTTPD} method.
+     * @return a response
+     * @see NanoHTTPD#newFixedLengthResponse(IStatus, String, String)
+     */
+    public static NanoHTTPD.Response newFixedLengthResponse(IStatus status, String mimeType, String txt) {
+        return NanoHTTPD.newFixedLengthResponse(status, mimeType, txt);
+    }
+    /**
+     * Forwards to the repackaged {@code NanoHTTPD} method.
+     * @return a response
+     * @see NanoHTTPD#newFixedLengthResponse(IStatus, String, InputStream, long)
+     */
+    public static NanoHTTPD.Response newFixedLengthResponse(IStatus status, String mimeType, InputStream data, long length) {
+        return NanoHTTPD.newFixedLengthResponse(status, mimeType, data, length);
     }
 }
