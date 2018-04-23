@@ -11,7 +11,7 @@ Use [NanoHTTPD](https://github.com/NanoHttpd/nanohttpd) like a champion.
     <dependency>
         <groupId>com.github.mike10004</groupId>
         <artifactId>nanohttpd-server</artifactId>
-        <version>0.10</version>
+        <version>0.14</version> <!-- use latest version identified by Maven badge above -->
     </dependency>
 
 ## Usage
@@ -27,7 +27,7 @@ Use [NanoHTTPD](https://github.com/NanoHttpd/nanohttpd) like a champion.
         public static void main(String[] args) throws Exception {
             Charset charset = Charset.forName("UTF-8");
             NanoServer server = NanoServer.builder()
-                    .get(NanoResponse.status(200).plainText("hello, world", charset))
+                    .get(request -> NanoResponse.status(200).plainText("hello, world", charset))
                     .build();
             try (NanoControl control = server.startServer();
                 InputStream in = control.baseUri().toURL().openStream()) {
