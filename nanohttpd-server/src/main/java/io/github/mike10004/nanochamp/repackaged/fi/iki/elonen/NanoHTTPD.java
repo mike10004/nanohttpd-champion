@@ -66,6 +66,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.security.KeyStore;
 import java.text.SimpleDateFormat;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -84,8 +85,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
+import javax.annotation.Nullable;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -254,7 +258,7 @@ public abstract class NanoHTTPD {
      *
      * @author LordFokas
      */
-    public class CookieHandler implements Iterable<String> {
+    public static class CookieHandler implements Iterable<String> {
 
         private final HashMap<String, String> cookies = new HashMap<String, String>();
 
@@ -1473,20 +1477,7 @@ public abstract class NanoHTTPD {
          * Headers for the HTTP response. Use addHeader() to add lines. the
          * lowercase map is automatically kept up to date.
          */
-        @SuppressWarnings("serial")
-        private final Map<String, String> header = new HashMap<String, String>() {
-
-            public String put(String key, String value) {
-                lowerCaseHeader.put(key == null ? key : key.toLowerCase(), value);
-                return super.put(key, value);
-            };
-        };
-
-        /**
-         * copy of the header map with all the keys lowercase for faster
-         * searching.
-         */
-        private final Map<String, String> lowerCaseHeader = new HashMap<String, String>();
+        private final List<Map.Entry<String, String>> headersList = new ArrayList<>();
 
         /**
          * The request method that spawned this response.
@@ -1530,7 +1521,7 @@ public abstract class NanoHTTPD {
          * Adds given line to the header.
          */
         public void addHeader(String name, String value) {
-            this.header.put(name, value);
+            this.headersList.add(new AbstractMap.SimpleImmutableEntry<>(name, value));
         }
 
         /**
@@ -1542,9 +1533,24 @@ public abstract class NanoHTTPD {
          */
         public void closeConnection(boolean close) {
             if (close)
-                this.header.put("connection", "close");
+                addHeader("connection", "close");
             else
-                this.header.remove("connection");
+                removeHeader("connection");
+        }
+
+        private void removeHeader(String name) {
+            List<Integer> indexes = new ArrayList<>();
+            for (int i = 0; i < headersList.size(); i++) {
+                Map.Entry<String, String> entry = headersList.get(i);
+                String queryName = entry.getKey();
+                if ((name == null && queryName == null) || (name != null && name.equalsIgnoreCase(queryName))) {
+                    indexes.add(i);
+                }
+            }
+            for (int i = indexes.size(); i >= 0; i--) {
+                int k = indexes.get(i);
+                headersList.remove(k);
+            }
         }
 
         /**
@@ -1559,8 +1565,32 @@ public abstract class NanoHTTPD {
             return this.data;
         }
 
+        /**
+         * Gets a list of values of headers whose name matches the given name case-insensitively.
+         * @param name
+         * @return
+         */
+        public List<String> getHeaders(String name) {
+            return findHeaderValues(name).collect(Collectors.toList());
+        }
+
+        /**
+         * Gets the value of a header whose name matches the given name.
+         * No guarantee w/r/t ordering of header.
+         * @param name
+         * @return
+         */
+        @Nullable
         public String getHeader(String name) {
-            return this.lowerCaseHeader.get(name.toLowerCase());
+            return findHeaderValues(name).findFirst().orElse(null);
+        }
+
+        private Stream<String> findHeaderValues(String name) {
+            return headersList.stream()
+                    .filter(entry -> {
+                        String queryName = entry.getKey();
+                        return (name == null && queryName == null) || (name != null && name.equalsIgnoreCase(queryName));
+                    }).map(Map.Entry::getValue);
         }
 
         public String getMimeType() {
@@ -1602,7 +1632,7 @@ public abstract class NanoHTTPD {
                 if (getHeader("date") == null) {
                     printHeader(pw, "Date", gmtFrmt.format(new Date()));
                 }
-                for (Entry<String, String> entry : this.header.entrySet()) {
+                for (Map.Entry<String, String> entry : this.headersList) {
                     printHeader(pw, entry.getKey(), entry.getValue());
                 }
                 if (getHeader("connection") == null) {
@@ -2137,8 +2167,8 @@ public abstract class NanoHTTPD {
         String decoded = null;
         try {
             decoded = URLDecoder.decode(str, "UTF8");
-        } catch (UnsupportedEncodingException ignored) {
-            NanoHTTPD.LOG.log(Level.WARNING, "Encoding not supported, ignored", ignored);
+        } catch (UnsupportedEncodingException e) {
+            NanoHTTPD.LOG.log(Level.WARNING, "Encoding not supported, ignored", e);
         }
         return decoded;
     }

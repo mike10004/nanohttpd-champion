@@ -1,26 +1,25 @@
 package io.github.mike10004.nanochamp.server;
 
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
-import com.google.common.net.HostAndPort;
-import com.google.common.net.HttpHeaders;
 import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD;
 import io.github.mike10004.nanochamp.server.NanoServer.RequestHandler;
-import org.apache.commons.lang3.StringUtils;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import static io.github.mike10004.nanochamp.server.GuavaShim.checkArgument;
+import static io.github.mike10004.nanochamp.server.GuavaShim.checkState;
+import static java.util.Objects.requireNonNull;
 
 public class NanoControl implements Closeable {
 
     private final NanoHTTPD server;
-    private final ImmutableList<? extends RequestHandler> requestHandlers;
+    private final List<? extends RequestHandler> requestHandlers;
     private final AtomicLong numRequestsMatched = new AtomicLong(0L);
     private final AtomicLong numRequestsHeard = new AtomicLong(0L);
 
@@ -29,8 +28,9 @@ public class NanoControl implements Closeable {
     }
 
     NanoControl(int port, Iterable<? extends RequestHandler> requestHandlers, RequestHandler defaultRequestHandler, HttpdImplFactory httpdFactory) throws IOException {
-        checkArgument( port > 0 && port < 65536, "port %s", port);
-        this.requestHandlers = ImmutableList.copyOf(requestHandlers);
+        checkArgument( port > 0 && port < 65536, "port " + port);
+        this.requestHandlers = Collections.unmodifiableList(StreamSupport.stream(requestHandlers.spliterator(), false)
+                .collect(Collectors.toList()));
         if (httpdFactory == null) {
             httpdFactory = createDefaultFactory();
         }
@@ -57,7 +57,7 @@ public class NanoControl implements Closeable {
 
         public NanoHttpdImpl(int port, RequestHandler defaultRequestHandler) {
             super(port);
-            this.defaultRequestHandler = checkNotNull(defaultRequestHandler);
+            this.defaultRequestHandler = requireNonNull(defaultRequestHandler);
         }
         @Override
         public Response serve(IHTTPSession session) {
@@ -97,12 +97,13 @@ public class NanoControl implements Closeable {
      * Checks whether the response contains a Content-Encoding header.
      * @param response the response
      * @return true iff the response contains a nonempty Content-Encoding header
-     * @see HttpHeaders#CONTENT_ENCODING
      */
     static boolean isAnyContentEncodingSpecified(NanoHTTPD.Response response) {
-        String contentEncoding = response.getHeader(HttpHeaders.CONTENT_ENCODING);
-        return !Strings.isNullOrEmpty(contentEncoding);
+        String contentEncoding = response.getHeader(CONTENT_ENCODING);
+        return !GuavaShim.isNullOrEmpty(contentEncoding);
     }
+
+    private static final String CONTENT_ENCODING = "content-encoding";
 
     @Override
     public void close() throws IOException {
@@ -115,9 +116,9 @@ public class NanoControl implements Closeable {
         return server.getListeningPort();
     }
 
-    public HostAndPort getSocketAddress() {
+    public HostAddress getSocketAddress() {
         checkState(server != null, "server not instantiated yet");
-        return HostAndPort.fromParts("localhost", getListeningPort());
+        return new HostAddress("localhost", getListeningPort());
     }
 
     /**
@@ -135,7 +136,7 @@ public class NanoControl implements Closeable {
      * @return the base URI
      */
     public URI baseUri(String scheme) {
-        checkArgument("http".equals(scheme) || "https".equals(scheme), "only 'http' or 'https' is accepted for scheme parameter, not %s", StringUtils.abbreviate(scheme, 16));
+        checkArgument("http".equals(scheme) || "https".equals(scheme), "only 'http' or 'https' is accepted for scheme parameter");
         return URI.create(scheme + "://" + getSocketAddress() + "/");
     }
 

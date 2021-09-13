@@ -1,7 +1,5 @@
 package io.github.mike10004.nanochamp.server;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
 import com.google.common.net.MediaType;
 import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD;
 import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD.Response.IStatus;
@@ -10,9 +8,13 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Builder for responses. Builds instances of {@link NanoHTTPD.Response}.
@@ -29,18 +31,20 @@ public class NanoResponse {
     private MediaType contentType;
     private Supplier<? extends InputStream> content;
     private long contentLength;
-    private Multimap<String, String> headers;
+    private final List<Map.Entry<String, String>> headers;
 
     private NanoResponse(IStatus status) {
-        this.status = checkNotNull(status);
+        this.status = requireNonNull(status);
         contentType = MediaType.OCTET_STREAM;
         content = () -> new ByteArrayInputStream(EMPTY_BYTE_ARRAY);
-        headers = ArrayListMultimap.create();
+        headers = new ArrayList<>();
     }
 
     public NanoHTTPD.Response build() {
         NanoHTTPD.Response response = NanoHTTPD.newFixedLengthResponse(status, contentType.toString(), content.get(), contentLength);
-        headers.forEach(response::addHeader);
+        headers.forEach(entry -> {
+            response.addHeader(entry.getKey(), entry.getValue());
+        });
         return response;
     }
 
@@ -108,7 +112,7 @@ public class NanoResponse {
 
     @SuppressWarnings("UnusedReturnValue")
     public NanoResponse type(MediaType contentType) {
-        this.contentType = checkNotNull(contentType);
+        this.contentType = requireNonNull(contentType);
         return this;
     }
 
@@ -121,7 +125,7 @@ public class NanoResponse {
     }
 
     public NanoResponse header(String name, String value) {
-        headers.put(name, value);
+        headers.add(new AbstractMap.SimpleImmutableEntry<>(name, value));
         return this;
     }
 

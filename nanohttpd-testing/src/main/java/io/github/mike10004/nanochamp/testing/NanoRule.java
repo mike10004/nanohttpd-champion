@@ -1,18 +1,20 @@
 package io.github.mike10004.nanochamp.testing;
 
-import com.google.common.collect.Lists;
-import com.google.common.net.HostAndPort;
+import io.github.mike10004.nanochamp.server.HostAddress;
 import io.github.mike10004.nanochamp.server.NanoControl;
 import io.github.mike10004.nanochamp.server.NanoServer;
 import io.github.mike10004.nanochamp.server.NanoServer.RequestHandler;
 import org.junit.rules.ExternalResource;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
+
 
 public class NanoRule extends ExternalResource {
 
@@ -20,7 +22,7 @@ public class NanoRule extends ExternalResource {
     private NanoControl control;
 
     public static NanoRule withHandlers(RequestHandler firstHandler, RequestHandler secondHandler, RequestHandler...requestHandlers) {
-        return new NanoRule(Lists.asList(firstHandler, secondHandler, requestHandlers));
+        return new NanoRule(Stream.concat(Stream.of(firstHandler, secondHandler), Arrays.stream(requestHandlers)).collect(Collectors.toList()));
     }
 
     public static NanoRule withHandler(RequestHandler requestHandler) {
@@ -28,7 +30,7 @@ public class NanoRule extends ExternalResource {
     }
 
     public NanoRule(NanoServer nanoServer) {
-        this.server = checkNotNull(nanoServer);
+        this.server = requireNonNull(nanoServer);
     }
 
     public NanoRule(Collection<? extends RequestHandler> requestHandlers) {
@@ -39,8 +41,10 @@ public class NanoRule extends ExternalResource {
         return control;
     }
 
-    public HostAndPort getSocketAddress() {
-        checkState(control != null, "server not started yet");
+    public HostAddress getSocketAddress() {
+        if (control == null) {
+            throw new IllegalStateException("server not started yet");
+        };
         return control.getSocketAddress();
     }
 

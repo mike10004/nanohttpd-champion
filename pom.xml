@@ -7,7 +7,7 @@
     <groupId>com.github.mike10004</groupId>
     <artifactId>nanohttpd-champion</artifactId>
     <packaging>pom</packaging>
-    <version>0.14</version>
+    <version>0.15-SNAPSHOT</version>
     <name>nanohttpd-champion</name>
     <description>Library that helps you use NanoHTTPD</description>
     <url>https://github.com/mike10004/nanohttpd-champion</url>
@@ -187,6 +187,11 @@
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
                 <version>4.12</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.code.findbugs</groupId>
+                <artifactId>jsr305</artifactId>
+                <version>3.0.2</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>

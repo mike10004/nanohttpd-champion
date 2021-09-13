@@ -1,7 +1,5 @@
 package io.github.mike10004.nanochamp.server;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMultimap;
 import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD;
 import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD.IHTTPSession;
 import io.github.mike10004.nanochamp.repackaged.fi.iki.elonen.NanoHTTPD.Method;
@@ -16,16 +14,19 @@ import java.net.URI;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class NanoServer {
 
-    private final ImmutableList<RequestHandler> requestHandlers;
+    private final List<RequestHandler> requestHandlers;
     private final RequestHandler defaultRequestHandler;
     @Nullable
     private NanoControl.HttpdImplFactory httpdFactory;
@@ -36,8 +37,8 @@ public class NanoServer {
     }
 
     public NanoServer(Iterable<RequestHandler> requestHandlers, RequestHandler defaultRequestHandler) {
-        this.requestHandlers = ImmutableList.copyOf(requestHandlers);
-        this.defaultRequestHandler = checkNotNull(defaultRequestHandler);
+        this.requestHandlers = Collections.unmodifiableList(StreamSupport.stream(requestHandlers.spliterator(), false).collect(Collectors.toList()));
+        this.defaultRequestHandler = requireNonNull(defaultRequestHandler);
         this.httpdFactory = null;
     }
 
@@ -90,7 +91,7 @@ public class NanoServer {
      */
     public static class Builder {
 
-        private List<RequestHandler> requestHandlers = new ArrayList<>();
+        private final List<RequestHandler> requestHandlers = new ArrayList<>();
         private RequestHandler defaultRequestHandler = RequestHandler.getDefault();
         private NanoControl.HttpdImplFactory httpdImplFactory = null;
 
@@ -132,7 +133,7 @@ public class NanoServer {
         }
 
         public Builder session(RequestHandler requestHandler) {
-            requestHandlers.add(checkNotNull(requestHandler));
+            requestHandlers.add(requireNonNull(requestHandler));
             return this;
         }
 
@@ -142,7 +143,7 @@ public class NanoServer {
         }
 
         public Builder setDefault(RequestHandler defaultRequestHandler) {
-            this.defaultRequestHandler = checkNotNull(defaultRequestHandler);
+            this.defaultRequestHandler = requireNonNull(defaultRequestHandler);
             return this;
         }
 
@@ -155,14 +156,20 @@ public class NanoServer {
         return new Builder();
     }
 
+    public interface ValueListMap<K, V> {
+
+        Map<K, List<V>> asMap();
+
+    }
+
     public static class ServiceRequest {
         public final NanoHTTPD.Method method;
         public final URI uri;
-        public final ImmutableMultimap<String, String> query;
+        public final ValueListMap<String, String> query;
         public final Function<String, String> headers;
         public final IHTTPSession session;
 
-        public ServiceRequest(Method method, URI uri, ImmutableMultimap<String, String> query, Function<String, String> headers, IHTTPSession session) {
+        public ServiceRequest(Method method, URI uri, ValueListMap<String, String> query, Function<String, String> headers, IHTTPSession session) {
             this.method = method;
             this.uri = uri;
             this.query = query;
@@ -175,10 +182,16 @@ public class NanoServer {
         }
     }
 
-    private static <K, V> ImmutableMultimap<K, V> makeMultimap(Map<K, ? extends Collection<V>> map) {
+    private static <K, V> ValueListMap<K, V> makeMultimap(Map<K, ? extends Collection<V>> map) {
         List<Map.Entry<K, V>> list = new ArrayList<>();
         map.forEach((k, values) -> values.forEach(v -> list.add(new SimpleImmutableEntry<>(k, v))));
-        return ImmutableMultimap.copyOf(list);
+        Map<K, List<V>> m = MultimapShim.copyOf(list);
+        return new ValueListMap<K, V>() {
+            @Override
+            public Map<K, List<V>> asMap() {
+                return m;
+            }
+        };
     }
 
     /**
